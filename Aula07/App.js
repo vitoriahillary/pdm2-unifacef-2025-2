@@ -1,183 +1,119 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  SectionList,
-  StyleSheet,
-  useWindowDimensions,
-  SafeAreaView,
-} from 'react-native';
 
-const PRODUTOS = [
-  { id: '1', nome: 'Teclado', preco: '5800.00', categoria: 'Eletrônicos' },
-  { id: '2', nome: 'Iphone', preco: '3200.00', categoria: 'Eletrônicos' },
-  { id: '3', nome: 'Fone de Ouvido', preco: '750.00', categoria: 'Eletrônicos' },
-  { id: '4', nome: 'Blusa', preco: '89.90', categoria: 'Roupas' },
-  { id: '5', nome: 'Calça Jeans', preco: '199.90', categoria: 'Roupas' },
-  { id: '6', nome: 'Jaqueta', preco: '350.00', categoria: 'Roupas' },
-  { id: '7', nome: 'Livro de Receitas', preco: '55.00', categoria: 'Livros e Mídias' },
-  { id: '8', nome: 'Ebook de Autoconfiança', preco: '99.00', categoria: 'Livros e Mídias' },
-  { id: '9', nome: 'Mouse', preco: '1500.00', categoria: 'Eletrônicos' },
-  { id: '10', nome: 'Tênis', preco: '280.00', categoria: 'Roupas' },
-];
+import React from 'react';
+import { SectionList, Text, View, StyleSheet, TextInput, useWindowDimensions } from 'react-native';
+import dados from './data/dados'
 
-const agruparProdutos = (produtos) => {
-  const grupos = produtos.reduce((acc, produto) => {
-    const { categoria } = produto;
-    if (!acc[categoria]) {
-      acc[categoria] = [];
+
+export default function App() {
+
+
+  const { width, height } = useWindowDimensions()
+
+
+  const [lista, setLista] = React.useState(() => dados)
+  const [filtro, setFiltro] = React.useState('')
+
+
+  const handleFilter = React.useCallback((text) => {
+    setFiltro(text)
+    if (!text) {
+      setLista(dados)
+      return
     }
-    acc[categoria].push(produto);
-    return acc;
-  }, {});
-
-  
-  return Object.keys(grupos).map((title) => ({
-    title,
-    data: grupos[title],
-  }));
-};
-
-
-const ProdutoItem = React.memo(({ nome, preco }) => (
-  <View style={produtoStyles.card}>
-    <Text style={produtoStyles.nome}>{nome}</Text>
-    <Text style={produtoStyles.preco}>R$ {preco}</Text>
-  </View>
-));
-
-const produtoStyles = StyleSheet.create({
-  card: {
-    backgroundColor: '#ffffffba',
-    padding: 15,
-    marginHorizontal: 10,
-    marginVertical: 4,
-    borderRadius: 8,
-    borderLeftWidth: 5,
-    borderLeftColor: '#007bffbb',
-    elevation: 2, // Sombra para Android
-    shadowColor: '#000', // Sombra para iOS
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1.5,
-  },
-  nome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  preco: {
-    fontSize: 14,
-    color: '#007bff',
-    marginTop: 4,
-  },
-});
+    const q = text.toLowerCase()
+    const filtered = dados
+      .map(section => {
+        const data = section.data.filter(item =>
+          item.nome.toLowerCase().includes(q)
+        )
+        return { ...section, data }
+      })
+      .filter(section => section.data.length > 0)
 
 
-const SectionHeader = React.memo(({ title }) => (
-  <View style={headerStyles.header}>
-    <Text style={headerStyles.title}>{title}</Text>
-  </View>
-));
-
-const headerStyles = StyleSheet.create({
-  header: {
-    backgroundColor: '#f4f4f4',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginTop: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-});
+    setLista(filtered)
+  }, [setFiltro, setLista])
 
 
-export default function CatalogoProdutos() {
-  const [searchTerm, setSearchTerm] = useState('');
-  
- 
-  const { width } = useWindowDimensions();
-  const isLargeScreen = width > 768; 
-  
-
-  const dadosAgrupadosFiltrados = useMemo(() => {
-
-    const produtosFiltrados = PRODUTOS.filter((produto) =>
-      produto.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-   
-    return agruparProdutos(produtosFiltrados);
-  }, [searchTerm]);
+  const renderItem = React.useCallback(({ item }) => (
+    <Text style={styles.item}>
+      {item.nome} ({item.preco.toLocaleString('pt-BR', { style: "currency", currency: "BRL" })})
+    </Text>
+  ), [])
 
 
-  const renderProduto = useCallback(({ item }) => {
-    return <ProdutoItem nome={item.nome} preco={item.preco} />;
-  }, []);
+  const renderSectionHeader = React.useCallback(({ section }) => (
+    <Text style={styles.header}>{section.categoria}</Text>
+  ), [])
 
 
-  const renderHeader = useCallback(({ section: { title } }) => {
-    return <SectionHeader title={title} />;
-  }, []);
+  const keyExtractor = React.useCallback((item) => item.id.toString(), [])
+
+
+  const containerStyle = React.useMemo(() => {
+    const isWide = width >= 600
+    return [
+      styles.container,
+      {
+        paddingHorizontal: isWide ? 24 : 12,
+        paddingTop: isWide ? 20 : 12,
+      }
+    ]
+  }, [width])
+
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Catálogo Interativo de Produtos</Text>
-      
-      <TextInput
-        style={[styles.searchInput, isLargeScreen && styles.searchInputLarge]}
-        placeholder="Buscar produtos por nome..."
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-      />
-      
+    <View style={containerStyle}>
+      <View style={styles.filter}>
+        <Text style={styles.label}>Filtrar:</Text>
+        <TextInput
+          style={styles.textInput}
+          value={filtro}
+          onChangeText={handleFilter}
+        />
+      </View>
       <SectionList
-        sections={dadosAgrupadosFiltrados}
-        keyExtractor={(item, index) => item.id + index}
-        renderItem={renderProduto} // Funções memoizadas
-        renderSectionHeader={renderHeader} // Funções memoizadas
-        
-        initialNumToRender={10}
-        windowSize={10}
+        sections={lista}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
       />
-    </SafeAreaView>
+    </View>
   );
 }
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    flexDirection: 'column'
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+  filter: {
+    flexDirection: 'row',
+    backgroundColor: '#ccc',
     padding: 15,
-    textAlign: 'center',
-    backgroundColor: '#eef',
+    height: 64
   },
-  searchInput: {
-    height: 45,
-    borderColor: '#ccc',
+  label: {
+    marginBottom: 8,
+    marginTop: 8,
+    marginRight: 8,
+  },
+  textInput: {
     borderWidth: 1,
+    borderColor: '#888',
+    marginBottom: 8,
+    marginTop: 8,
+    padding: 10,
     borderRadius: 8,
-    paddingHorizontal: 15,
-    margin: 10,
-    backgroundColor: '#fff',
-    fontSize: 16,
+    backgroundColor: 'white'
   },
-
-  searchInputLarge: {
-    alignSelf: 'center',
-    width: '50%', 
-    marginVertical: 20,
+  header: {
+    fontSize: 20,
+    backgroundColor: '#eee',
+    padding: 8,
+    fontWeight: 'bold',
+  },
+  item: {
+    padding: 10,
   },
 });
+
